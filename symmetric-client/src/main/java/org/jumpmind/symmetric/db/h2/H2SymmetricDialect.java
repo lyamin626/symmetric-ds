@@ -65,7 +65,7 @@ public class H2SymmetricDialect extends AbstractEmbeddedSymmetricDialect impleme
 
     @Override
     public void removeTrigger(StringBuilder sqlBuffer, String catalogName, String schemaName, String triggerName,
-            String tableName) {
+            String tableName, ISqlTransaction transaction) {
         DatabaseInfo dbInfo = getPlatform().getDatabaseInfo();
         String prefix = Table.getFullyQualifiedTablePrefix(catalogName, schemaName, dbInfo.getDelimiterToken(),
                 dbInfo.getCatalogSeparator(), dbInfo.getSchemaSeparator());

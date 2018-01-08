@@ -161,7 +161,7 @@ public class MySqlSymmetricDialect extends AbstractSymmetricDialect implements I
 
     @Override
     public void removeTrigger(StringBuilder sqlBuffer, String catalogName, String schemaName,
-            String triggerName, String tableName) {
+            String triggerName, String tableName, ISqlTransaction transaction) {
         catalogName = catalogName == null ? "" : (catalogName + ".");
         final String sql = "drop trigger " + catalogName + triggerName;
         logSql(sql, sqlBuffer);

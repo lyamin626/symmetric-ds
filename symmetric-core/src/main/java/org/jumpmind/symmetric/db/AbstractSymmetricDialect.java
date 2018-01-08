@@ -311,15 +311,38 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
         return "drop trigger " + schemaName + triggerName;
     }
 
+    public void removeTrigger(StringBuilder sqlBuffer, String catalogName, String schemaName, String triggerName, String tableName) {
+
+        ISqlTransaction transaction = platform.getSqlTemplate().startSqlTransaction();
+        removeTrigger(sqlBuffer, catalogName, schemaName, triggerName, tableName, transaction);
+
+    }
+    
     public void removeTrigger(StringBuilder sqlBuffer, String catalogName, String schemaName,
-            String triggerName, String tableName) {
+            String triggerName, String tableName, ISqlTransaction transaction) {
         String sql = getDropTriggerSql(sqlBuffer, catalogName, schemaName, triggerName, tableName);
-        logSql(sql, sqlBuffer);
+//        logSql(sql, sqlBuffer);
         if (parameterService.is(ParameterConstants.AUTO_SYNC_TRIGGERS)) {
-            try {
-                this.platform.getSqlTemplate().update(sql);
-            } catch (Exception e) {
-                log.warn("Tried to remove trigger using: {} and failed because: {}", sql, e.getMessage());
+            try{
+                try {
+//                    this.platform.getSqlTemplate().update(sql);
+//                    log.debug("Running: {}", sql);
+                    logSql(sql, sqlBuffer);
+                    transaction.execute(sql);
+                } catch (Exception e) {
+                    log.warn("Tried to remove trigger using: {} and failed because: {}", sql, e.getMessage());
+                }
+                
+                transaction.commit();
+            } catch (SqlException ex) {
+                if (transaction != null) {
+                    transaction.rollback();
+                }
+                throw ex;
+            } finally {
+                if (transaction != null) {
+                    transaction.close();
+                }
             }
         }
     }
@@ -335,6 +358,14 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
             sqlBuffer.append(System.getProperty("line.separator"));
         }
     }
+    
+    public void createTrigger(final StringBuilder sqlBuffer, final DataEventType dml,
+            final Trigger trigger, final TriggerHistory hist, final Channel channel,
+            final String tablePrefix, final Table table) {
+        
+        ISqlTransaction transaction = platform.getSqlTemplate().startSqlTransaction();
+        createTrigger(sqlBuffer,dml,trigger,hist,channel,tablePrefix,table,transaction);
+    }
 
     /*
      * Create the configured trigger. The catalog will be changed to the source
@@ -342,7 +373,7 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
      */
     public void createTrigger(final StringBuilder sqlBuffer, final DataEventType dml,
             final Trigger trigger, final TriggerHistory hist, final Channel channel,
-            final String tablePrefix, final Table table) {
+            final String tablePrefix, final Table table, ISqlTransaction transaction) {
         log.info("Creating {} trigger for {}", hist.getTriggerNameForDmlType(dml),
                 table.getFullyQualifiedTableName());
 
@@ -355,10 +386,10 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
                 tablePrefix, table, defaultCatalog, defaultSchema);
 
         if (parameterService.is(ParameterConstants.AUTO_SYNC_TRIGGERS)) {
-            ISqlTransaction transaction = null;
+//            ISqlTransaction transaction = null;
             try {
-                transaction = this.platform.getSqlTemplate().startSqlTransaction(
-                        platform.getDatabaseInfo().isRequiresAutoCommitForDdl());
+//                transaction = this.platform.getSqlTemplate().startSqlTransaction(
+//                        platform.getDatabaseInfo().isRequiresAutoCommitForDdl());
                 previousCatalog = switchCatalogForTriggerInstall(sourceCatalogName, transaction);
 
                 try {

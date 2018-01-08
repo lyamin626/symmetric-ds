@@ -130,7 +130,7 @@ public class SqlAnywhereSymmetricDialect extends AbstractSymmetricDialect implem
 
     @Override
     public void removeTrigger(StringBuilder sqlBuffer, final String catalogName, String schemaName,
-            final String triggerName, String tableName) {
+            final String triggerName, String tableName, ISqlTransaction transaction) {
         schemaName = schemaName == null ? "" : (schemaName + ".");
         final String sql = "drop trigger " + schemaName + triggerName;
         logSql(sql, sqlBuffer);

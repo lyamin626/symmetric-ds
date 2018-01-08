@@ -25,6 +25,7 @@ import java.sql.Types;
 import org.jumpmind.db.model.Table;
 import org.jumpmind.db.platform.IDatabasePlatform;
 import org.jumpmind.db.sql.ISqlTransaction;
+import org.jumpmind.db.sql.SqlException;
 import org.jumpmind.db.util.BinaryEncoding;
 import org.jumpmind.symmetric.SymmetricException;
 import org.jumpmind.symmetric.common.ParameterConstants;
@@ -167,7 +168,7 @@ public class PostgreSqlSymmetricDialect extends AbstractSymmetricDialect impleme
     
     @Override
     public void removeTrigger(StringBuilder sqlBuffer, String catalogName, String schemaName,
-            String triggerName, String tableName) {
+            String triggerName, String tableName, ISqlTransaction transaction) {
         Table table = platform.getTableFromCache(catalogName, schemaName, tableName, false);
         if (table != null) {
             String quoteChar = platform.getDatabaseInfo().getDelimiterToken();
@@ -180,15 +181,29 @@ public class PostgreSqlSymmetricDialect extends AbstractSymmetricDialect impleme
                     + "() cascade";
             logSql(dropFunction, sqlBuffer);
             if (parameterService.is(ParameterConstants.AUTO_SYNC_TRIGGERS)) {
-                try {
-                    platform.getSqlTemplate().update(dropSql);
-                } catch (Exception e) {
-                    log.warn("Failed to remove trigger using: " + dropSql, e);
-                }
-                try {
-                    platform.getSqlTemplate().update(dropFunction);
-                } catch (Exception e) {
-                    log.warn("Failed to remove function using: " + dropFunction, e);
+                try{
+                    try {
+                        transaction.execute(dropSql);
+                    } catch (Exception e) {
+                        log.warn("Failed to remove trigger using: " + dropSql, e);
+                    }
+                    
+                    try {
+                        transaction.execute(dropFunction);
+                    } catch (Exception e) {
+                        log.warn("Failed to remove function using: " + dropFunction, e);
+                    }
+                    
+                    transaction.commit();
+                } catch (SqlException ex) {
+                    if (transaction != null) {
+                        transaction.rollback();
+                    }
+                    throw ex;
+                } finally {
+                    if (transaction != null) {
+                        transaction.close();
+                    }
                 }
             }
         }
