@@ -312,38 +312,30 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
     }
 
     public void removeTrigger(StringBuilder sqlBuffer, String catalogName, String schemaName, String triggerName, String tableName) {
-
-        ISqlTransaction transaction = platform.getSqlTemplate().startSqlTransaction();
-        removeTrigger(sqlBuffer, catalogName, schemaName, triggerName, tableName, transaction);
+        ISqlTransaction transaction = null;
+        try {
+            transaction = platform.getSqlTemplate().startSqlTransaction();
+            removeTrigger(sqlBuffer, catalogName, schemaName, triggerName, tableName, transaction);
+            transaction.commit();
+        } catch (SqlException ex) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
+            throw ex;
+        } finally {
+            close(transaction);
+        }
 
     }
     
-    public void removeTrigger(StringBuilder sqlBuffer, String catalogName, String schemaName,
-            String triggerName, String tableName, ISqlTransaction transaction) {
+    public void removeTrigger(StringBuilder sqlBuffer, String catalogName, String schemaName, String triggerName, String tableName,
+            ISqlTransaction transaction) {
         String sql = getDropTriggerSql(sqlBuffer, catalogName, schemaName, triggerName, tableName);
-//        logSql(sql, sqlBuffer);
+        logSql(sql, sqlBuffer);
         if (parameterService.is(ParameterConstants.AUTO_SYNC_TRIGGERS)) {
-            try{
-                try {
-//                    this.platform.getSqlTemplate().update(sql);
-//                    log.debug("Running: {}", sql);
-                    logSql(sql, sqlBuffer);
-                    transaction.execute(sql);
-                } catch (Exception e) {
-                    log.warn("Tried to remove trigger using: {} and failed because: {}", sql, e.getMessage());
-                }
-                
-                transaction.commit();
-            } catch (SqlException ex) {
-                if (transaction != null) {
-                    transaction.rollback();
-                }
-                throw ex;
-            } finally {
-                if (transaction != null) {
-                    transaction.close();
-                }
-            }
+            // this.platform.getSqlTemplate().update(sql);
+            transaction.execute(sql);
+            log.debug("Running: {}", sql);
         }
     }
 
@@ -402,23 +394,24 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
                 }
 
                 postCreateTrigger(transaction, sqlBuffer, dml, trigger, hist, channel, tablePrefix, table);
-                transaction.commit();
-            } catch (SqlException ex) {
-            	if (transaction != null) {
-            		transaction.rollback();
-            	}
-                throw ex;
+//                transaction.commit();
+//            } catch (SqlException ex) {
+//                if (transaction != null) {
+//                    transaction.rollback();
+//                }
+//                throw ex;
+//            } 
             } finally {
-                try {
+//                try {
                     if (sourceCatalogName != null
                             && !sourceCatalogName.equalsIgnoreCase(previousCatalog)) {
                         switchCatalogForTriggerInstall(previousCatalog, transaction);
                     }
-                } finally {
-                	if (transaction != null) {
-                		transaction.close();
-                	}
-                }
+//                } finally {
+//                    if (transaction != null) {
+//                        transaction.close();
+//                    }
+//                }
             }
         }
     }
@@ -474,14 +467,14 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
     
                     transaction.commit();
                 } catch (SqlException ex) {
-                	if (transaction != null) {
-                		transaction.rollback();
-                	}
+                    if (transaction != null) {
+                        transaction.rollback();
+                    }
                     throw ex;
                 } finally {
-                	if (transaction != null) {
-                		transaction.close();
-                	}
+                    if (transaction != null) {
+                        transaction.close();
+                    }
                 }
             }
         }
@@ -636,38 +629,38 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
     }
 
     public String getName() {
-    		if (targetPlatform != null && !targetPlatform.equals(platform)) {
-    			return targetPlatform.getSqlTemplate().getDatabaseProductName();
-    		}
+            if (targetPlatform != null && !targetPlatform.equals(platform)) {
+                return targetPlatform.getSqlTemplate().getDatabaseProductName();
+            }
         return databaseName;
     }
 
     public String getVersion() {
-    		if (targetPlatform != null && !targetPlatform.equals(platform)) {
-			return targetPlatform.getSqlTemplate().getDatabaseMajorVersion() + 
-					"." + targetPlatform.getSqlTemplate().getDatabaseMinorVersion();
-		}
+            if (targetPlatform != null && !targetPlatform.equals(platform)) {
+            return targetPlatform.getSqlTemplate().getDatabaseMajorVersion() + 
+                    "." + targetPlatform.getSqlTemplate().getDatabaseMinorVersion();
+        }
         return databaseMajorVersion + "." + databaseMinorVersion;
     }
 
     public int getMajorVersion() {
-    		if (targetPlatform != null && !targetPlatform.equals(platform)) {
-			return targetPlatform.getSqlTemplate().getDatabaseMajorVersion();
-		}
+            if (targetPlatform != null && !targetPlatform.equals(platform)) {
+            return targetPlatform.getSqlTemplate().getDatabaseMajorVersion();
+        }
         return databaseMajorVersion;
     }
 
     public int getMinorVersion() {
-    		if (targetPlatform != null && !targetPlatform.equals(platform)) {
-			return targetPlatform.getSqlTemplate().getDatabaseMinorVersion();
-		}
+            if (targetPlatform != null && !targetPlatform.equals(platform)) {
+            return targetPlatform.getSqlTemplate().getDatabaseMinorVersion();
+        }
         return databaseMinorVersion;
     }
 
     public String getProductVersion() {
-    		if (targetPlatform != null && !targetPlatform.equals(platform)) {
-			return targetPlatform.getSqlTemplate().getDatabaseProductVersion();
-		}
+            if (targetPlatform != null && !targetPlatform.equals(platform)) {
+            return targetPlatform.getSqlTemplate().getDatabaseProductVersion();
+        }
         return databaseProductVersion;
     }
 
@@ -777,7 +770,7 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
     }
 
     public void truncateTable(String tableName) {
-	   String quote = platform.getDdlBuilder().isDelimitedIdentifierModeOn() ? platform
+       String quote = platform.getDdlBuilder().isDelimitedIdentifierModeOn() ? platform
                .getDatabaseInfo().getDelimiterToken() : "";
         boolean success = false;
         int tryCount = 5;
@@ -786,7 +779,7 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
                 Table table = platform.getTableFromCache(tableName, false);
                 if (table != null) {
                     platform.getSqlTemplate().update(
-                    		String.format("truncate table %s%s%s", quote, table.getName(), quote));
+                            String.format("truncate table %s%s%s", quote, table.getName(), quote));
                     success = true;
                 } else {
                     throw new RuntimeException(String.format("Could not find %s to trunate",
@@ -925,13 +918,13 @@ abstract public class AbstractSymmetricDialect implements ISymmetricDialect {
 
     @Override
     public IDatabasePlatform getTargetPlatform() {
-		return targetPlatform;
-	}
+        return targetPlatform;
+    }
 
     @Override
     public void setTargetPlatform(IDatabasePlatform targetPlatform) {
-		this.targetPlatform = targetPlatform;
-	}
+        this.targetPlatform = targetPlatform;
+    }
     
     
 }

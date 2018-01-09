@@ -61,7 +61,7 @@ public class PostgreSqlSymmetricDialect extends AbstractSymmetricDialect impleme
     @Override
     public void createRequiredDatabaseObjects() {
 
-    	ISqlTransaction transaction = null;
+        ISqlTransaction transaction = null;
         try {
             transaction = platform.getSqlTemplate().startSqlTransaction();
             enableSyncTriggers(transaction);
@@ -181,30 +181,8 @@ public class PostgreSqlSymmetricDialect extends AbstractSymmetricDialect impleme
                     + "() cascade";
             logSql(dropFunction, sqlBuffer);
             if (parameterService.is(ParameterConstants.AUTO_SYNC_TRIGGERS)) {
-                try{
-                    try {
-                        transaction.execute(dropSql);
-                    } catch (Exception e) {
-                        log.warn("Failed to remove trigger using: " + dropSql, e);
-                    }
-                    
-                    try {
-                        transaction.execute(dropFunction);
-                    } catch (Exception e) {
-                        log.warn("Failed to remove function using: " + dropFunction, e);
-                    }
-                    
-                    transaction.commit();
-                } catch (SqlException ex) {
-                    if (transaction != null) {
-                        transaction.rollback();
-                    }
-                    throw ex;
-                } finally {
-                    if (transaction != null) {
-                        transaction.close();
-                    }
-                }
+                transaction.execute(dropSql);
+                transaction.execute(dropFunction);
             }
         }
     }
