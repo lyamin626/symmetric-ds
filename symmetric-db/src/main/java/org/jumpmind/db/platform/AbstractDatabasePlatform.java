@@ -415,7 +415,7 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
             } else if (type == Types.BOOLEAN) {
                 objectValue = value.equals("1") ? Boolean.TRUE : Boolean.FALSE;
             } else if (!(column.getJdbcTypeName() != null && FormatUtils.upper(column.getJdbcTypeName()).contains(TypeMap.GEOMETRY))
-                    && !(column.getJdbcTypeName() != null && FormatUtils.upper(column.getJdbcTypeName()).contains(TypeMap.GEOGRAPHY))
+                    //&& !(column.getJdbcTypeName() != null && FormatUtils.upper(column.getJdbcTypeName()).contains(TypeMap.GEOGRAPHY))
                     && (type == Types.BLOB || type == Types.LONGVARBINARY || type == Types.BINARY || type == Types.VARBINARY ||
                     // SQLServer ntext type
                             type == -10)) {
